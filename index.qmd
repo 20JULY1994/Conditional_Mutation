@@ -1,0 +1,110 @@
+---
+title: "Quiz_Conditional_mutate"
+format: html
+editor: visual
+---
+
+```{r}
+if(!require(pacman)) install.packages("pacman")   
+pacman::p_load(rio, tidyverse, here, janitor)   
+india_tb <- import("https://docs.google.com/uc?id=1dorSmZ09JtuchIYS18T2r1lxndayUFoz&export=download",
+ format = "csv",
+ setclass = "tibble")
+
+head(india_tb, 10)
+```
+
+## calculates and classifies BMI, and tabulates BMI categories by frequency
+
+```{r}
+india_tb_bmis_1 <- 
+  india_tb %>%
+  mutate(height_m = htin_cms/100, 
+         bmi = wtin_kgs/(height_m^2)) %>% 
+  mutate(bmi_class = case_when(bmi < 18.5 ~ 
+  'Underweight', bmi >= 18.5 & bmi < 25 ~ 'Normal range', bmi >= 25 & bmi < 30 ~ 'Overweight', bmi >= 30 ~ 'Obese'))
+tabyl(india_tb_bmis_1, bmi_class) %>% 
+  select(bmi_class, n)
+```
+
+## For Asian populations, lower BMI cut-off values are sometimes used for defining overweight and obesity. (See for example, [this paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5571887/))
+
+```{r}
+india_tb_bmis <- 
+  india_tb %>%
+  mutate(height_m = htin_cms/100, 
+         bmi = wtin_kgs/(height_m^2)) %>% 
+  mutate(bmi_class = case_when(bmi < 18.5 ~  'Underweight', bmi >= 18.5 & bmi < 23 ~ 'Normal range', bmi >= 23 & bmi < 25 ~ 'Overweight', bmi >= 25 & bmi < 30 ~ 'Pre-Obese', bmi >= 30 ~ "Obese"))
+tabyl(india_tb_bmis, bmi_class) %>% 
+  select(bmi_class, n)
+```
+
+## Using the BMI classifications from the first question (not the Asian-specific classification), you would like to create a bar graph of BMI class frequencies for just women.
+
+```{r}
+data_for_bmi_plot <- 
+  india_tb_bmis_1 %>% 
+  mutate(bmi_class = factor(x = 
+bmi_class, levels
+  = c("Underweight", "Normal range", "Overweight", "Obese"))) %>% 
+  filter(sex 
+== "Female")
+
+ggplot(data_for_bmi_plot) +
+  aes(x = bmi_class) +
+  geom_bar(fill = "#112446") +
+  theme_minimal()
+```
+
+## Hint: You can use esquisse::esquisser(data_for_bmi_plot) to obtain the appropriate ggplot2 code.
+
+```{r}
+esquisse::esquisser(data_for_bmi_plot)
+```
+
+
+## Recruiting subgroups
+
+### You would like to recruit individuals who drink alcohol or who smoke into a further study on health habits. Women and men will be recruited into separate studies and a new column, recruit
+
+```{r}
+health_habits_recruitment_df <- 
+  india_tb %>% 
+  select(sex, alcohol, smoking) %>% # subset to make manipulations more visible
+  mutate(recruit_to_mental_health_study = 
+           case_when(sex == "Female" & (alcohol == "Yes" | smoking == "Yes") ~ "F study",
+            sex == "Male" & (alcohol == "Yes" | smoking == "Yes") ~ "M study", TRUE
+  ~ "Do not recruit") # do not recruit everyone else
+         )
+
+tabyl(health_habits_recruitment_df, recruit_to_mental_health_study) %>% 
+  select(recruit_to_mental_health_study, n)
+```
+
+## Now, imagine you would like to recruit individuals who are overweight or obese (BMI ≥ 25) or who have diabetes (diabetes == 1) into a further study on comorbidities. Employed and not-employed individuals are to be recruited into separate studies (an “Employed study” and a “Not employed” study respectively).
+
+```{r}
+employment_indicators_df <- 
+  india_tb_bmis_1 %>% 
+  select(employment, diabetes, bmi) %>% # subset to make manipulations more visible
+  mutate(recruit_comorbidity_study = 
+           case_when(employment == "Non - Working" & (bmi >= 25 | diabetes == 1) ~ "Not employed study" ,
+            employment == "Working" & (bmi >= 25 | diabetes == 1) ~ "Employed study", TRUE
+  ~ "Do not recruit") # do not recruit everyone else
+         )
+
+tabyl(employment_indicators_df, recruit_comorbidity_study) %>% 
+  select(recruit_comorbidity_study, n)
+
+```
+
+## Replacing NAs
+
+### You would like to replace the missing values in the chest_xray variable with the string “X-ray not performed”, then cross-tabulate the TB form and chest_xray variables.
+
+```{r}
+india_tb %>% 
+  mutate(chest_xray = if_else(condition = chest_xray == "", true = "X-ray not performed", false = 
+chest_xray)) %>% 
+  tabyl(form_of_tb, chest_xray)
+```
