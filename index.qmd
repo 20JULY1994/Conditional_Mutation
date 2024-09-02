@@ -58,10 +58,9 @@ ggplot(data_for_bmi_plot) +
 
 ## Hint: You can use esquisse::esquisser(data_for_bmi_plot) to obtain the appropriate ggplot2 code.
 
-```{r}
+```{r warning = FALSE}
 esquisse::esquisser(data_for_bmi_plot)
 ```
-
 
 ## Recruiting subgroups
 
